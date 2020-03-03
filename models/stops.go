@@ -1,8 +1,8 @@
 package models
 
 import (
-	"encoding/json"
-	_ "fmt"
+	_"encoding/json"
+	"fmt"
 
 	"github.com/cdpierse/go_dublin_bus/constants"
 	_ "github.com/gorilla/mux"
@@ -29,7 +29,18 @@ const (
 func GetStops() string {
 
 	body := GetRequestBody(StopsURL)
+
+	fmt.Println(len(body))
+	// json.Unmarshal(body,&stops)
+
+	// for k,_ := range stops {
+	// 	fmt.Printf("keys[%s] \n",k)
+	// }
 	
-	return body
+	return "hello"
+
+}
+
+func GetStop() {
 
 }
