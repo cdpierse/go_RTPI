@@ -7,6 +7,6 @@ import (
 
 func main() {
 	fmt.Println("Hello Welcome To The Main Function")
-	fmt.Println(models.PrintBaseServer())
+	fmt.Println(models.GetStops())
 
 }
