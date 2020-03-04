@@ -1,19 +1,16 @@
 package models
 
 import (
-	_ "bytes"
 	"encoding/json"
-	_ "encoding/json"
 	"fmt"
 	"log"
-	"reflect"
-
+	"net/http"
 	"github.com/cdpierse/go_dublin_bus/constants"
-	_ "github.com/gorilla/mux"
+	"github.com/gorilla/mux"
 )
 
-// StopResult is a struct mapping out the fields returned
-// in the results for Stop(s) GET request in the RTPI server.
+// Stop is a struct mapping out the fields returned
+// from an RTPI response "results" field for Stop(s).
 type Stop struct {
 	Stopid             string `json:"stopid"`
 	Displaystopid      string `json:"displaystopid"`
@@ -36,10 +33,10 @@ type Stop struct {
 // https://mholt.github.io/json-to-go/ as that allowed me to generate this
 // struct
 type StopsResponse struct {
-	Errorcode       string       `json:"errorcode"`
-	Errormessage    string       `json:"errormessage"`
-	Numberofresults int          `json:"numberofresults"`
-	Timestamp       string       `json:"timestamp"`
+	Errorcode       string `json:"errorcode"`
+	Errormessage    string `json:"errormessage"`
+	Numberofresults int    `json:"numberofresults"`
+	Timestamp       string `json:"timestamp"`
 	Results         []Stop `json:"results"`
 }
 
@@ -55,24 +52,40 @@ func unpackStopResponseResults(responseJSON []byte) []Stop {
 	if err != nil {
 		log.Fatalln(err)
 	}
-	fmt.Println(reflect.TypeOf(res))
-	fmt.Println(reflect.TypeOf(res.Results))
+	fmt.Println("Succesfully retrieved All Stops")
 
 	return res.Results
 
 }
 
-func GetStops() string {
-
+// GetStops returns all stops defined in the host system along 
+// with metadata for each stop returned. 
+func GetStops(w http.ResponseWriter, r *http.Request) {
 	body := GetRequestBody(StopsURL)
-	results := unpackStopResponseResults(body)
-	fmt.Println(results[0:10])
-
-	return "hello"
+	stops := unpackStopResponseResults(body)
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(stops)
 
 }
+// GetStops returns the metadata for a Stop with a given stop ID
+// with metadata for each stop returned. 
+func GetStop(w http.ResponseWriter, r *http.Request) {
+	body := GetRequestBody(StopsURL)
+	stops := unpackStopResponseResults(body)
 
-func GetStop() {
+	w.Header().Set("Content-Type", "application/json")
+	fmt.Println(("I get here at least"))
+	params := mux.Vars(r)
+	for _, item := range stops {
+		if item.Stopid == params["stop_id"] {
+			json.NewEncoder(w).Encode(item)
+			return
+		}
+			
+	}
+	json.NewEncoder(w).Encode(&Stop{})
+
+	
 	// nothing in here
 
 }
