@@ -2,11 +2,11 @@ package models
 
 import (
 	"encoding/json"
-	"fmt"
-	"log"
-	"net/http"
 	"github.com/cdpierse/go_dublin_bus/constants"
 	"github.com/gorilla/mux"
+	"log"
+	"net/http"
+	"strings"
 )
 
 // Stop is a struct mapping out the fields returned
@@ -52,40 +52,76 @@ func unpackStopResponseResults(responseJSON []byte) []Stop {
 	if err != nil {
 		log.Fatalln(err)
 	}
-	fmt.Println("Succesfully retrieved All Stops")
+	log.Println("Succesfully retrieved All Stops")
 
 	return res.Results
 
 }
-
-// GetStops returns all stops defined in the host system along 
-// with metadata for each stop returned. 
-func GetStops(w http.ResponseWriter, r *http.Request) {
+func getAllStops() []Stop {
 	body := GetRequestBody(StopsURL)
 	stops := unpackStopResponseResults(body)
+	return stops
+
+}
+
+// GetStops returns all stops defined in the host system along
+// with metadata for each stop returned.
+func GetStops(w http.ResponseWriter, r *http.Request) {
+	stops := getAllStops()
 	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(stops)
 
 }
+
 // GetStops returns the metadata for a Stop with a given stop ID
-// with metadata for each stop returned. 
+// with metadata for each stop returned.
 func GetStop(w http.ResponseWriter, r *http.Request) {
 	body := GetRequestBody(StopsURL)
 	stops := unpackStopResponseResults(body)
+	found := false
 
 	w.Header().Set("Content-Type", "application/json")
-	fmt.Println(("I get here at least"))
 	params := mux.Vars(r)
 	for _, item := range stops {
 		if item.Stopid == params["stop_id"] {
+			found = true
 			json.NewEncoder(w).Encode(item)
 			return
 		}
-			
-	}
-	json.NewEncoder(w).Encode(&Stop{})
 
-	
-	// nothing in here
+	}
+	if found {
+		return
+	} else {
+		// if nothing is returned we can at least
+		// write the structure of a stop to stream.
+		json.NewEncoder(w).Encode(&Stop{})
+	}
+
+}
+
+func GetStopByName(w http.ResponseWriter, r *http.Request) {
+	body := GetRequestBody(StopsURL)
+	stops := unpackStopResponseResults(body)
+	found := false
+
+	w.Header().Set("Content-Type", "application/json")
+	params := mux.Vars(r)
+	for _, item := range stops {
+		if strings.ToLower(item.Fullname) == strings.ToLower(params["stop_name"]) ||
+			strings.ToLower(item.Shortname) == strings.ToLower(params["stop_name"]) {
+			found = true
+			json.NewEncoder(w).Encode(item)
+
+		}
+
+	}
+	if found {
+		return
+	} else {
+		// if nothing is returned we can at least
+		// write the structure of a stop to stream.
+		json.NewEncoder(w).Encode(&Stop{})
+	}
 
 }
