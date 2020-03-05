@@ -2,12 +2,13 @@ package models
 
 import (
 	"encoding/json"
-	"github.com/cdpierse/go_dublin_bus/constants"
-	"github.com/gorilla/mux"
-	"github.com/lithammer/fuzzysearch/fuzzy"
 	"log"
 	"net/http"
 	"strings"
+
+	"github.com/cdpierse/go_dublin_bus/constants"
+	"github.com/gorilla/mux"
+	"github.com/lithammer/fuzzysearch/fuzzy"
 )
 
 // Appends stop specific endpoint to base server address
@@ -111,6 +112,7 @@ func GetStopByName(w http.ResponseWriter, r *http.Request) {
 	found := false
 
 	w.Header().Set("Content-Type", "application/json")
+
 	params := mux.Vars(r)
 	for _, item := range stops {
 		if strings.ToLower(item.Fullname) == strings.ToLower(params["stop_name"]) ||
@@ -139,7 +141,9 @@ func GetStopByOperator(w http.ResponseWriter, r *http.Request) {
 	// params := mux.Vars(r)
 
 }
-
+// GetStopByFuzzyName will attempt to return all partial stop matches
+// for a provided query string. It uses fuzzy searching to attempt to match
+// a source string
 func GetStopByFuzzyName(w http.ResponseWriter, r *http.Request) {
 	stops := getAllStops()
 	found := false
@@ -147,8 +151,12 @@ func GetStopByFuzzyName(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
 	params := mux.Vars(r)
 	for _, item := range stops {
-		if fuzzy.Match(strings.ToLower(params["stop_name"]), strings.ToLower(item.Fullname)) == true ||
-			fuzzy.Match(strings.ToLower(params["stop_name"]), strings.ToLower(item.Shortname)) == true {
+		rankFullName := fuzzy.RankMatch(strings.ToLower(params["stop_name"]), strings.ToLower(item.Fullname))
+		rankShortName := fuzzy.RankMatch(strings.ToLower(params["stop_name"]), strings.ToLower(item.Shortname))
+		if  (rankFullName > 7 && rankFullName <= 10) ||
+			(rankShortName > 7 && rankShortName <= 10) {
+			log.Println(params["stop_name"],item.Fullname)
+			log.Println(fuzzy.RankMatch(strings.ToLower(params["stop_name"]), strings.ToLower(item.Fullname)))
 			found = true
 			json.NewEncoder(w).Encode(item)
 
