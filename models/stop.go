@@ -64,6 +64,8 @@ func unpackStopResponseResults(responseJSON []byte) []Stop {
 	return res.Results
 
 }
+
+// will cache this in future version and use better naming
 func getAllStops() []Stop {
 	body := GetRequestBody(StopsURL)
 	stops := unpackStopResponseResults(body)
@@ -71,11 +73,56 @@ func getAllStops() []Stop {
 
 }
 
+// GetStopByQueryVals is effectively a combinaiton of all
+// previous Stop GET requests that returns all results where
+// a match is found for any given query key:value pair.
+func filterByQuery(stops []Stop, r *http.Request) []Stop {
+	var filteredStops []Stop
+	stopParam := r.URL.Query().Get("stop_id")
+	nameParam := r.URL.Query().Get("stop_name")
+	operatorParam := r.URL.Query().Get("operator")
+
+	log.Println(stopParam)
+	log.Println(nameParam)
+	log.Println(operatorParam)
+	if stopParam != "" {
+		for _, item := range stops {
+			if stopParam == item.Stopid {
+				filteredStops = append(filteredStops, item)
+			}
+		}
+	}
+
+	if nameParam != "" {
+		for _, item := range stops {
+			rankFullName := fuzzy.RankMatch(strings.ToLower(nameParam), strings.ToLower(item.Fullname))
+			rankShortName := fuzzy.RankMatch(strings.ToLower(nameParam), strings.ToLower(item.Shortname))
+			if (rankFullName > 7 && rankFullName <= 10) ||
+				(rankShortName > 7 && rankShortName <= 10) {
+				filteredStops = append(filteredStops, item)
+			}
+		}
+	}
+
+	if operatorParam != "" {
+		for _, item := range stops {
+			numOperators := len(item.Operators)
+			for i := 0; i < numOperators; i++ {
+				operatorName := item.Operators[i].Name
+				if strings.ToLower(operatorName) == strings.ToLower(operatorParam) {
+					filteredStops = append(filteredStops, item)
+				}
+			}
+		}
+	}
+}
+
 // GetStops returns all stops defined in the host system along
 // with metadata for each stop returned.
 func GetStops(w http.ResponseWriter, r *http.Request) {
 	stops := getAllStops()
 	w.Header().Set("Content-Type", "application/json")
+	queries := r.URL.Query()
 	json.NewEncoder(w).Encode(stops)
 
 }
@@ -166,20 +213,12 @@ func GetStopByFuzzyName(w http.ResponseWriter, r *http.Request) {
 
 }
 
-// GetStopByQueryVals is effectively a combinaiton of all
-// previous Stop GET requests that returns all results where
-// a match is found for any given query key:value pair.
-func filterByQuery(w http.ResponseWriter, r *http.Request) {
-	// w.Header().Set("Content-Type", "application/json")
-	// param := mux.Vars(r)
-
-}
-
-// GetStopsByOperator returns all stops that are serviced by 
-// the requested operator name i.e. BE (Bus Eireann). 
+// GetStopsByOperator returns all stops that are serviced by
+// the requested operator name i.e. BE (Bus Eireann).
 func GetStopsByOperator(w http.ResponseWriter, r *http.Request) {
 	stops := getAllStops()
 	found := false
+	filterByQuery(stops, r)
 
 	w.Header().Set("Content-Type", "application/json")
 
@@ -194,9 +233,7 @@ func GetStopsByOperator(w http.ResponseWriter, r *http.Request) {
 				json.NewEncoder(w).Encode(item)
 
 			}
-
 		}
-
 	}
 	if found {
 		return
