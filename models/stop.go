@@ -16,6 +16,9 @@ const (
 	StopsURL = constants.RTPIBaseServer + "busstopinformation"
 )
 
+// Operator struct mapping fields for a
+// service operator including the routes
+// covered by that operator
 type Operator struct {
 	Name         string   `json:"name"`
 	Operatortype int      `json:"operatortype"`
@@ -133,33 +136,19 @@ func GetStopByName(w http.ResponseWriter, r *http.Request) {
 
 }
 
-func GetStopByOperator(w http.ResponseWriter, r *http.Request) {
-	// stops := getAllStops()
-	// found := false
-
-	// w.Header().Set("Content-Type", "application/json")
-	// params := mux.Vars(r)
-
-}
 // GetStopByFuzzyName will attempt to return all partial stop matches
 // for a provided query string. It uses fuzzy searching to attempt to match
 // a source string
 func GetStopByFuzzyName(w http.ResponseWriter, r *http.Request) {
 	stops := getAllStops()
 	found := false
-	log.Println(r.URL.Query())
-	log.Println(mux.Vars(r))
-	query := r.URL.Query()
-	log.Println(query["key2"][0])
-
-	
 
 	w.Header().Set("Content-Type", "application/json")
 	params := mux.Vars(r)
 	for _, item := range stops {
 		rankFullName := fuzzy.RankMatch(strings.ToLower(params["stop_name"]), strings.ToLower(item.Fullname))
 		rankShortName := fuzzy.RankMatch(strings.ToLower(params["stop_name"]), strings.ToLower(item.Shortname))
-		if  (rankFullName > 7 && rankFullName <= 10) ||
+		if (rankFullName > 7 && rankFullName <= 10) ||
 			(rankShortName > 7 && rankShortName <= 10) {
 			found = true
 			json.NewEncoder(w).Encode(item)
@@ -177,12 +166,41 @@ func GetStopByFuzzyName(w http.ResponseWriter, r *http.Request) {
 
 }
 
-// GetStopByQueryVals is effectively a combinaiton of all 
+// GetStopByQueryVals is effectively a combinaiton of all
 // previous Stop GET requests that returns all results where
-// a match is found for any given query key:value pair. 
-func GetStopByQueryVals(w http.ResponseWriter, r *http.Request) {
-	// stops := getAllStops()
-	// found := false
-	// log.Println(r.URL.Query())
+// a match is found for any given query key:value pair.
+func filterByQuery(w http.ResponseWriter, r *http.Request) {
+	// w.Header().Set("Content-Type", "application/json")
+	// param := mux.Vars(r)
 
+}
+
+// GetStopsByOperator returns all stops that are serviced by 
+// the requested operator name i.e. BE (Bus Eireann). 
+func GetStopsByOperator(w http.ResponseWriter, r *http.Request) {
+	stops := getAllStops()
+	found := false
+
+	w.Header().Set("Content-Type", "application/json")
+
+	params := mux.Vars(r)
+
+	for _, item := range stops {
+		numOperators := len(item.Operators)
+		for i := 0; i < numOperators; i++ {
+			operatorName := item.Operators[i].Name
+			if strings.ToLower(operatorName) == strings.ToLower(params["operator_name"]) {
+				found = true
+				json.NewEncoder(w).Encode(item)
+
+			}
+
+		}
+
+	}
+	if found {
+		return
+	} else {
+		json.NewEncoder(w).Encode(&Stop{})
+	}
 }
