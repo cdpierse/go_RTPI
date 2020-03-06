@@ -16,6 +16,7 @@ func main() {
 	router.HandleFunc("/stops/id/{stop_id}", models.GetStop).Methods("GET")
 	router.HandleFunc("/stops/stop_name/{stop_name}", models.GetStopByName).Methods("GET")
 	router.HandleFunc("/stops/stop_name_fuzzy/{stop_name}", models.GetStopByFuzzyName).Methods("GET")
+	router.HandleFunc("/stops/query/", models.GetStopByFuzzyName).Methods("GET")
 
 	http.ListenAndServe(":8000", router)
 }

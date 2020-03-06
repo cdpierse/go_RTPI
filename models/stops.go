@@ -147,6 +147,12 @@ func GetStopByOperator(w http.ResponseWriter, r *http.Request) {
 func GetStopByFuzzyName(w http.ResponseWriter, r *http.Request) {
 	stops := getAllStops()
 	found := false
+	log.Println(r.URL.Query())
+	log.Println(mux.Vars(r))
+	query := r.URL.Query()
+	log.Println(query["key2"][0])
+
+	
 
 	w.Header().Set("Content-Type", "application/json")
 	params := mux.Vars(r)
@@ -155,8 +161,6 @@ func GetStopByFuzzyName(w http.ResponseWriter, r *http.Request) {
 		rankShortName := fuzzy.RankMatch(strings.ToLower(params["stop_name"]), strings.ToLower(item.Shortname))
 		if  (rankFullName > 7 && rankFullName <= 10) ||
 			(rankShortName > 7 && rankShortName <= 10) {
-			log.Println(params["stop_name"],item.Fullname)
-			log.Println(fuzzy.RankMatch(strings.ToLower(params["stop_name"]), strings.ToLower(item.Fullname)))
 			found = true
 			json.NewEncoder(w).Encode(item)
 
@@ -170,5 +174,15 @@ func GetStopByFuzzyName(w http.ResponseWriter, r *http.Request) {
 		// write the structure of a stop to stream.
 		json.NewEncoder(w).Encode(&Stop{})
 	}
+
+}
+
+// GetStopByQueryVals is effectively a combinaiton of all 
+// previous Stop GET requests that returns all results where
+// a match is found for any given query key:value pair. 
+func GetStopByQueryVals(w http.ResponseWriter, r *http.Request) {
+	// stops := getAllStops()
+	// found := false
+	// log.Println(r.URL.Query())
 
 }
