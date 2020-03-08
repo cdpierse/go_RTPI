@@ -73,6 +73,16 @@ func getAllStops() []Stop {
 
 }
 
+func checkOperatorPresent(source, target string) bool {
+
+	if strings.ToLower(source) == strings.ToLower(target) {
+		return true
+	}
+
+	return false
+
+}
+
 // GetStopByQueryVals is effectively a combinaiton of all
 // previous Stop GET requests that returns all results where
 // a match is found for any given query key:value pair.
@@ -85,10 +95,34 @@ func filterByQuery(stops []Stop, r *http.Request) []Stop {
 	log.Println(stopParam)
 	log.Println(nameParam)
 	log.Println(operatorParam)
+	// if operatorParam != "" {
+	// 	for i := len(stops) - 1; i >= 0; i-- {
+	// 		item := stops[i]
+	// 		numOperators := len(item.Operators)
+	// 		for j := 0; j < numOperators; j++ {
+	// 			operatorName := item.Operators[j].Name
+	// 			if strings.ToLower(operatorName) != strings.ToLower(operatorParam) {
+	// 				filteredStops = append(stops[:i], stops[i+1:]...)
+	// 			}
+	// 		}
+	// 	}
+	// }
+
 	if stopParam != "" {
 		for _, item := range stops {
 			if stopParam == item.Stopid {
-				filteredStops = append(filteredStops, item)
+				if operatorParam != "" {
+					numOperators := len(item.Operators)
+					for i := 0; i < numOperators; i++ {
+						operatorName := item.Operators[i].Name
+						if checkOperatorPresent(operatorParam, operatorName) {
+							filteredStops = append(filteredStops, item)
+						}
+					}
+				} else {
+					filteredStops = append(filteredStops, item)
+				}
+
 			}
 		}
 	}
@@ -99,30 +133,34 @@ func filterByQuery(stops []Stop, r *http.Request) []Stop {
 			rankShortName := fuzzy.RankMatch(strings.ToLower(nameParam), strings.ToLower(item.Shortname))
 			if (rankFullName > 7 && rankFullName <= 10) ||
 				(rankShortName > 7 && rankShortName <= 10) {
-				filteredStops = append(filteredStops, item)
+				if operatorParam != "" {
+					numOperators := len(item.Operators)
+					for i := 0; i < numOperators; i++ {
+						operatorName := item.Operators[i].Name
+						if checkOperatorPresent(operatorParam, operatorName) {
+							filteredStops = append(filteredStops, item)
+						}
+					}
+				} else {
+					filteredStops = append(filteredStops, item)
+				}
+
 			}
 		}
 	}
 
-	if operatorParam != "" {
-		for _, item := range stops {
-			numOperators := len(item.Operators)
-			for i := 0; i < numOperators; i++ {
-				operatorName := item.Operators[i].Name
-				if strings.ToLower(operatorName) == strings.ToLower(operatorParam) {
-					filteredStops = append(filteredStops, item)
-				}
-			}
-		}
-	}
+	return filteredStops
 }
 
 // GetStops returns all stops defined in the host system along
 // with metadata for each stop returned.
 func GetStops(w http.ResponseWriter, r *http.Request) {
 	stops := getAllStops()
-	w.Header().Set("Content-Type", "application/json")
 	queries := r.URL.Query()
+	if len(queries) != 0 {
+		stops = filterByQuery(stops, r)
+	}
+	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(stops)
 
 }
