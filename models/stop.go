@@ -92,22 +92,6 @@ func filterByQuery(stops []Stop, r *http.Request) []Stop {
 	nameParam := r.URL.Query().Get("stop_name")
 	operatorParam := r.URL.Query().Get("operator")
 
-	log.Println(stopParam)
-	log.Println(nameParam)
-	log.Println(operatorParam)
-	// if operatorParam != "" {
-	// 	for i := len(stops) - 1; i >= 0; i-- {
-	// 		item := stops[i]
-	// 		numOperators := len(item.Operators)
-	// 		for j := 0; j < numOperators; j++ {
-	// 			operatorName := item.Operators[j].Name
-	// 			if strings.ToLower(operatorName) != strings.ToLower(operatorParam) {
-	// 				filteredStops = append(stops[:i], stops[i+1:]...)
-	// 			}
-	// 		}
-	// 	}
-	// }
-
 	if stopParam != "" {
 		for _, item := range stops {
 			if stopParam == item.Stopid {
