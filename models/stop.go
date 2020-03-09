@@ -287,60 +287,119 @@ func GetStopsByOperator(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-// GetNearbyStops returns all stops within distance n for a provided
+// GetNearbyStopsByID returns all stops within distance n for a provided
 // stop id
-func GetNearbyStopsById(w http.ResponseWriter, r *http.Request) {
+func GetNearbyStopsByID(w http.ResponseWriter, r *http.Request) {
 	stops := getAllStops()
 
-	// found := false
+	found := false
 	var sourcePoint orb.Point
 	var targetPoint orb.Point
 	maxDistance := 500.00
 	queries := r.URL.Query()
 	if len(queries) != 0 {
 		md := r.URL.Query().Get("max_distance")
-		if md  != ""{
-			maxDistance, _ = strconv.ParseFloat(md,8)
+		if md != "" {
+			maxDistance, _ = strconv.ParseFloat(md, 8)
 		}
 
 	}
 
-	
 	w.Header().Set("Content-Type", "application/json")
 
 	params := mux.Vars(r)
 
 	for _, item := range stops {
 		if item.Stopid == params["stop_id"] {
-			stopLat, err := strconv.ParseFloat(item.Latitude,5)
+			stopLat, err := strconv.ParseFloat(item.Latitude, 5)
 			if err != nil {
 				log.Panicln(err)
 			}
-			stopLong, err := strconv.ParseFloat(item.Longitude,5)
+			stopLong, err := strconv.ParseFloat(item.Longitude, 5)
 			if err != nil {
 				log.Panicln(err)
 			}
-			sourcePoint = orb.Point{stopLong,stopLat}
+
+			sourcePoint = orb.Point{stopLong, stopLat}
 		}
 	}
 	for _, item := range stops {
-		if item.Stopid != params["stop_id"]{
-			targetLat, err := strconv.ParseFloat(item.Latitude,5)
+		if item.Stopid != params["stop_id"] {
+			targetLat, err := strconv.ParseFloat(item.Latitude, 5)
 			if err != nil {
 				log.Panicln(err)
 			}
-			targetLong, err := strconv.ParseFloat(item.Longitude,5)
+			targetLong, err := strconv.ParseFloat(item.Longitude, 5)
 			if err != nil {
 				log.Panicln(err)
 			}
-			targetPoint = orb.Point{targetLong,targetLat}
+			targetPoint = orb.Point{targetLong, targetLat}
 			if geo.Distance(sourcePoint, targetPoint) <= maxDistance {
+				found = true
 				json.NewEncoder(w).Encode(item)
 
 			}
-			
 		}
 	}
-	
+	if found {
+		return
+	} else {
+		json.NewEncoder(w).Encode(&Stop{})
+	}
+}
+
+func GetStopsByDistance(w http.ResponseWriter, r *http.Request) {
+	stops := getAllStops()
+	w.Header().Set("Content-Type", "application/json")
+
+	found := false
+	var sourcePoint orb.Point
+	var targetPoint orb.Point
+	maxDistance := 500.00
+
+	queries := r.URL.Query()
+	if len(queries) != 0 {
+
+		lat, err := strconv.ParseFloat(r.URL.Query().Get("latitude"), 8)
+		if err != nil {
+			log.Panicln(err)
+		}
+		long, err := strconv.ParseFloat(r.URL.Query().Get("longitude"), 8)
+		if err != nil {
+			log.Panicln(err)
+		}
+		md := r.URL.Query().Get("max_distance")
+		if md != "" {
+			maxDistance, _ = strconv.ParseFloat(md, 8)
+		}
+		sourcePoint = orb.Point{long, lat}
+	} else {
+		log.Panicln("No query parameters for either lat or longitude found. ")
+	}
+
+	for _, item := range stops {
+		targetLat, err := strconv.ParseFloat(item.Latitude, 5)
+		if err != nil {
+			log.Panicln(err)
+		}
+		targetLong, err := strconv.ParseFloat(item.Longitude, 5)
+		if err != nil {
+			log.Panicln(err)
+		}
+		targetPoint = orb.Point{targetLong, targetLat}
+
+		if geo.Distance(sourcePoint, targetPoint) <= maxDistance {
+			found = true
+			json.NewEncoder(w).Encode(item)
+
+		}
+
+	}
+	if found {
+		return
+	} else {
+		json.NewEncoder(w).Encode(&Stop{})
+	}
+
 
 }

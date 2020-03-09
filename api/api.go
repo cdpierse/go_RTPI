@@ -19,7 +19,8 @@ func InitializeAPI() {
 	router.HandleFunc("/stops/stop_name/{stop_name}", models.GetStopByName).Methods("GET")
 	router.HandleFunc("/stops/stop_name_fuzzy/{stop_name}", models.GetStopByFuzzyName).Methods("GET")
 	router.HandleFunc("/stops/operator/{operator_name}", models.GetStopsByOperator).Methods("GET")
-	router.HandleFunc("/stops/distance/{stop_id}", models.GetNearbyStopsById).Methods("GET")
+	router.HandleFunc("/stops/distance", models.GetStopsByDistance).Methods("GET")
+	router.HandleFunc("/stops/distance/{stop_id}", models.GetNearbyStopsByID).Methods("GET")
 
 
 	http.ListenAndServe(":8000", router)
