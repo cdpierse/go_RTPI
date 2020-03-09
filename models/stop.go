@@ -348,6 +348,10 @@ func GetNearbyStopsByID(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
+// GetStopsByDistance takes in a required latitude and longitude
+// query key and value and returns all stops within max_distance of
+// that coordinate. If max_distance is not provided in the query
+// default distance is set to 500meters
 func GetStopsByDistance(w http.ResponseWriter, r *http.Request) {
 	stops := getAllStops()
 	w.Header().Set("Content-Type", "application/json")
@@ -374,7 +378,7 @@ func GetStopsByDistance(w http.ResponseWriter, r *http.Request) {
 		}
 		sourcePoint = orb.Point{long, lat}
 	} else {
-		log.Panicln("No query parameters for either lat or longitude found. ")
+		log.Panicln("No query parameters for either latitude or longitude found. ")
 	}
 
 	for _, item := range stops {
@@ -400,6 +404,5 @@ func GetStopsByDistance(w http.ResponseWriter, r *http.Request) {
 	} else {
 		json.NewEncoder(w).Encode(&Stop{})
 	}
-
 
 }
