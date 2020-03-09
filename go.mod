@@ -5,4 +5,5 @@ go 1.13
 require (
 	github.com/gorilla/mux v1.7.4
 	github.com/lithammer/fuzzysearch v1.1.0
+	github.com/paulmach/orb v0.1.5
 )

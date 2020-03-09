@@ -4,11 +4,14 @@ import (
 	"encoding/json"
 	"log"
 	"net/http"
+	"strconv"
 	"strings"
 
 	"github.com/cdpierse/go_dublin_bus/constants"
 	"github.com/gorilla/mux"
 	"github.com/lithammer/fuzzysearch/fuzzy"
+	"github.com/paulmach/orb"
+	"github.com/paulmach/orb/geo"
 )
 
 // Appends stop specific endpoint to base server address
@@ -112,6 +115,9 @@ func filterByQuery(stops []Stop, r *http.Request) []Stop {
 	}
 
 	if nameParam != "" {
+		if len(filteredStops) != 0 {
+			stops = filteredStops
+		}
 		for _, item := range stops {
 			rankFullName := fuzzy.RankMatch(strings.ToLower(nameParam), strings.ToLower(item.Fullname))
 			rankShortName := fuzzy.RankMatch(strings.ToLower(nameParam), strings.ToLower(item.Shortname))
@@ -152,8 +158,12 @@ func GetStops(w http.ResponseWriter, r *http.Request) {
 // GetStop returns the metadata for a Stop with a given stop ID
 // with metadata for each stop returned.
 func GetStop(w http.ResponseWriter, r *http.Request) {
-	body := GetRequestBody(StopsURL)
-	stops := unpackStopResponseResults(body)
+	stops := getAllStops()
+	queries := r.URL.Query()
+	if len(queries) != 0 {
+		stops = filterByQuery(stops, r)
+	}
+
 	found := false
 
 	w.Header().Set("Content-Type", "application/json")
@@ -181,6 +191,11 @@ func GetStop(w http.ResponseWriter, r *http.Request) {
 // of a stop.
 func GetStopByName(w http.ResponseWriter, r *http.Request) {
 	stops := getAllStops()
+
+	queries := r.URL.Query()
+	if len(queries) != 0 {
+		stops = filterByQuery(stops, r)
+	}
 	found := false
 
 	w.Header().Set("Content-Type", "application/json")
@@ -210,6 +225,10 @@ func GetStopByName(w http.ResponseWriter, r *http.Request) {
 // a source string
 func GetStopByFuzzyName(w http.ResponseWriter, r *http.Request) {
 	stops := getAllStops()
+	queries := r.URL.Query()
+	if len(queries) != 0 {
+		stops = filterByQuery(stops, r)
+	}
 	found := false
 
 	w.Header().Set("Content-Type", "application/json")
@@ -217,8 +236,8 @@ func GetStopByFuzzyName(w http.ResponseWriter, r *http.Request) {
 	for _, item := range stops {
 		rankFullName := fuzzy.RankMatch(strings.ToLower(params["stop_name"]), strings.ToLower(item.Fullname))
 		rankShortName := fuzzy.RankMatch(strings.ToLower(params["stop_name"]), strings.ToLower(item.Shortname))
-		if (rankFullName > 7 && rankFullName <= 10) ||
-			(rankShortName > 7 && rankShortName <= 10) {
+		if (rankFullName > 7 && rankFullName <= 20) ||
+			(rankShortName > 7 && rankShortName <= 20) {
 			found = true
 			json.NewEncoder(w).Encode(item)
 
@@ -239,6 +258,10 @@ func GetStopByFuzzyName(w http.ResponseWriter, r *http.Request) {
 // the requested operator name i.e. BE (Bus Eireann).
 func GetStopsByOperator(w http.ResponseWriter, r *http.Request) {
 	stops := getAllStops()
+	queries := r.URL.Query()
+	if len(queries) != 0 {
+		stops = filterByQuery(stops, r)
+	}
 	found := false
 	filterByQuery(stops, r)
 
@@ -262,4 +285,62 @@ func GetStopsByOperator(w http.ResponseWriter, r *http.Request) {
 	} else {
 		json.NewEncoder(w).Encode(&Stop{})
 	}
+}
+
+// GetNearbyStops returns all stops within distance n for a provided
+// stop id
+func GetNearbyStopsById(w http.ResponseWriter, r *http.Request) {
+	stops := getAllStops()
+
+	// found := false
+	var sourcePoint orb.Point
+	var targetPoint orb.Point
+	maxDistance := 500.00
+	queries := r.URL.Query()
+	if len(queries) != 0 {
+		md := r.URL.Query().Get("max_distance")
+		if md  != ""{
+			maxDistance, _ = strconv.ParseFloat(md,8)
+		}
+
+	}
+
+	
+	w.Header().Set("Content-Type", "application/json")
+
+	params := mux.Vars(r)
+
+	for _, item := range stops {
+		if item.Stopid == params["stop_id"] {
+			stopLat, err := strconv.ParseFloat(item.Latitude,5)
+			if err != nil {
+				log.Panicln(err)
+			}
+			stopLong, err := strconv.ParseFloat(item.Longitude,5)
+			if err != nil {
+				log.Panicln(err)
+			}
+			sourcePoint = orb.Point{stopLong,stopLat}
+		}
+	}
+	for _, item := range stops {
+		if item.Stopid != params["stop_id"]{
+			targetLat, err := strconv.ParseFloat(item.Latitude,5)
+			if err != nil {
+				log.Panicln(err)
+			}
+			targetLong, err := strconv.ParseFloat(item.Longitude,5)
+			if err != nil {
+				log.Panicln(err)
+			}
+			targetPoint = orb.Point{targetLong,targetLat}
+			if geo.Distance(sourcePoint, targetPoint) <= maxDistance {
+				json.NewEncoder(w).Encode(item)
+
+			}
+			
+		}
+	}
+	
+
 }
